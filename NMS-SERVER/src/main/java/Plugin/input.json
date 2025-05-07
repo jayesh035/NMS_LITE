@@ -1,0 +1,15 @@
+{
+  "ips": ["192.168.48.89", "192.168.48.90"],
+  "credentials": [
+    {
+      "id": 1,
+      "system_type": "snmp",
+      "community": "public"
+    },
+    {
+      "id": 2,
+      "system_type": "SNMP_V2C",
+      "community": "public"
+    }
+  ]
+}

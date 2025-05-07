@@ -1,0 +1,33 @@
+{
+  "results": [
+    {
+      "ip": "192.168.48.89",
+      "credentials": [
+        {
+          "credential_id": 1,
+          "success": false,
+          "error_message": "Credential system type 'snmp' is not supported for SNMP check"
+        },
+        {
+          "credential_id": 2,
+          "success": true
+        }
+      ]
+    },
+    {
+      "ip": "192.168.48.90",
+      "credentials": [
+        {
+          "credential_id": 1,
+          "success": false,
+          "error_message": "Credential system type 'snmp' is not supported for SNMP check"
+        },
+        {
+          "credential_id": 2,
+          "success": false,
+          "error_message": "Get error: request timeout (after 1 retries)"
+        }
+      ]
+    }
+  ]
+}
