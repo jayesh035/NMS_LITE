@@ -22,7 +22,7 @@ public class CredentialsHandler
     // Create a new credential
     public void handleCreate(RoutingContext context)
     {
-        JsonObject body = context.body().asJsonObject();
+        var body = context.body().asJsonObject();
         if (body == null || !body.containsKey("credential_name") || !body.containsKey("systemtype") || !body.containsKey("data"))
         {
             context.response()
@@ -32,9 +32,9 @@ public class CredentialsHandler
         }
 
 
-        String credentialName = body.getString("credential_name");
-        String systemType = body.getString("systemtype");
-        JsonObject data = body.getJsonObject("data");
+        var credentialName = body.getString("credential_name");
+        var systemType = body.getString("systemtype");
+        var data = body.getJsonObject("data");
 
         // Conditional validation based on systemType
         switch (systemType.toUpperCase())
@@ -72,7 +72,7 @@ public class CredentialsHandler
                 return;
         }
 
-        String insertQuery = DBQueries.createCredentials;
+        var insertQuery = DBQueries.createCredentials;
 
         DatabaseClient.getPool()
                 .preparedQuery(insertQuery)
@@ -105,7 +105,7 @@ public class CredentialsHandler
     // Read a single credential by ID
     public void handleRead(RoutingContext context)
     {
-        String id = context.pathParam("id");
+        var id = context.pathParam("id");
 
         if (id == null || !id.matches("\\d+"))
         {
@@ -115,7 +115,7 @@ public class CredentialsHandler
             return;
         }
 
-        String selectQuery = DBQueries.selectCredentialById;
+        var selectQuery = DBQueries.selectCredentialById;
         DatabaseClient.getPool()
                 .preparedQuery(selectQuery)
                 .execute(Tuple.of(Long.parseLong(id)), ar ->
@@ -123,7 +123,7 @@ public class CredentialsHandler
                     if (ar.succeeded() && ar.result().rowCount() > 0)
                     {
                         Row row = ar.result().iterator().next();
-                        JsonObject response = new JsonObject()
+                        var response = new JsonObject()
                                 .put("id", row.getLong("id"))
                                 .put("credential_name", row.getString("credential_name"))
                                 .put("systemtype", row.getString("systemtype"))
@@ -146,7 +146,7 @@ public class CredentialsHandler
     // List all credentials (admin-only)
     public void handleList(RoutingContext context)
     {
-        String selectQuery = DBQueries.selectAllCredentials;
+        var selectQuery = DBQueries.selectAllCredentials;
         DatabaseClient.getPool()
                 .preparedQuery(selectQuery)
                 .execute(ar ->
@@ -182,7 +182,7 @@ public class CredentialsHandler
     // Update a credential
     public void handleUpdate(RoutingContext context)
     {
-        String id = context.pathParam("id");
+        var id = context.pathParam("id");
 
         if (id == null || !id.matches("\\d+"))
         {
@@ -192,7 +192,7 @@ public class CredentialsHandler
             return;
         }
 
-        JsonObject body = context.body().asJsonObject();
+        var body = context.body().asJsonObject();
 
         if (body == null)
         {
@@ -202,11 +202,11 @@ public class CredentialsHandler
             return;
         }
 
-        String credentialName = body.getString("credential_name");
-        String systemType = body.getString("systemtype");
-        JsonObject data = body.getJsonObject("data");
+        var credentialName = body.getString("credential_name");
+        var systemType = body.getString("systemtype");
+        var data = body.getJsonObject("data");
 
-        String updateQuery = DBQueries.updateCredential;
+        var updateQuery = DBQueries.updateCredential;
         DatabaseClient.getPool()
                 .preparedQuery(updateQuery)
                 .execute(Tuple.of(credentialName, systemType, data != null ? data.encode() : null, Long.parseLong(id)), ar ->
@@ -231,7 +231,7 @@ public class CredentialsHandler
     // Delete a credential
     public void handleDelete(RoutingContext context)
     {
-        String id = context.pathParam("id");
+        var id = context.pathParam("id");
         if (id == null || !id.matches("\\d+"))
         {
             context.response()
@@ -240,7 +240,7 @@ public class CredentialsHandler
             return;
         }
 
-        String deleteQuery = DBQueries.deleteCredentialById;
+        var deleteQuery = DBQueries.deleteCredentialById;
         DatabaseClient.getPool()
                 .preparedQuery(deleteQuery)
                 .execute(Tuple.of(Long.parseLong(id)), ar ->

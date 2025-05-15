@@ -12,11 +12,11 @@ public class JwtUtils
     static
     {
         // Set up JWT Auth options using a keystore (you can also use HMAC, RSA, etc.)
-        KeyStoreOptions keyStoreOptions = new KeyStoreOptions()
+        var keyStoreOptions = new KeyStoreOptions()
                 .setType("jceks")
                 .setPath("keystore.jceks"); // Ensure you have a keystore to sign the JWT
 
-        JWTAuthOptions authOptions = new JWTAuthOptions().setKeyStore(keyStoreOptions);
+        var authOptions = new JWTAuthOptions().setKeyStore(keyStoreOptions);
         jwtAuth = JWTAuth.create(Vertx.vertx(), authOptions);
     }
 

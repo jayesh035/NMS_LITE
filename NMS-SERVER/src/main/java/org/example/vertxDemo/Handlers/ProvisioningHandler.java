@@ -1,4 +1,7 @@
 package org.example.vertxDemo.Handlers;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.auth.jwt.JWTAuth;
@@ -7,7 +10,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.Tuple;
 import org.example.vertxDemo.Database.DatabaseClient;
-import org.example.vertxDemo.Polling.PollingEngine;
+import org.example.vertxDemo.Verticles.PollingEngine;
+import org.example.vertxDemo.Utils.DBQueries;
 
 public class ProvisioningHandler
 {
@@ -18,10 +22,9 @@ public class ProvisioningHandler
         this.vertx=vertx;
     }
 
-
     public void handleProvision(RoutingContext context)
     {
-        JsonObject body = context.body().asJsonObject();
+        var body = context.body().asJsonObject();
 
         // Check if required fields are present
         if (body == null || !body.containsKey("ip_address") || !body.containsKey("discovary_id"))
@@ -31,11 +34,11 @@ public class ProvisioningHandler
             return;
         }
 
-        String ipAddress = body.getString("ip_address");
+        var ipAddress = body.getString("ip_address");
         Long discovaryId = body.getLong("discovary_id");
 
         // Query to fetch the discovery result based on ip_address and discovary_id
-        String query = "SELECT * FROM discovery_result WHERE ip_address = $1 AND discovary_id = $2 AND status = true";
+        var query = "SELECT * FROM discovery_result WHERE ip_address = $1 AND discovary_id = $2 AND status = true";
 
         DatabaseClient.
                 getPool().
@@ -53,17 +56,17 @@ public class ProvisioningHandler
                 }
 
                 var row = resultSet.iterator().next();
-                int credentialId = row.getInteger("credential_id");
+                var credentialId = row.getInteger("credential_id");
 
                 // Fetch SNMP metrics (directly associated with credential_id or some other logic to define metrics)
-                JsonObject metrics = new JsonObject();
+                var metrics = new JsonObject();
                 // Example: Adding some metrics directly
                 metrics.put("sysName", 3);        // sysName with a polling interval of 60 seconds
                 metrics.put("sysLocation", 4);   // sysLocation with a polling interval of 120 seconds
                 metrics.put("sysDescr", 5);       // sysDescr with a polling interval of 90 seconds
 
                 // Check if the provision record already exists for this ip_address and discovary_id
-                String checkProvisionQuery = "SELECT * FROM provision WHERE ip_address = $1 AND discovary_id = $2";
+                var checkProvisionQuery = "SELECT * FROM provision WHERE ip_address = $1 AND discovary_id = $2";
 
                 DatabaseClient.
                         getPool().
@@ -77,7 +80,7 @@ public class ProvisioningHandler
                         if (checkResultSet.rowCount() > 0)
                         {
 //                            // Record exists, perform an update instead of insert
-//                            String updateQuery = "UPDATE provision SET credential_id = $1, metrics = $2::jsonb " +
+//                            var updateQuery = "UPDATE provision SET credential_id = $1, metrics = $2::jsonb " +
 //                                    "WHERE ip_address = $3 AND discovary_id = $4";
 //
 //                            DatabaseClient.getPool().preparedQuery(updateQuery).execute(
@@ -99,7 +102,7 @@ public class ProvisioningHandler
                         else
                         {
                             // No record exists, insert a new provision record
-                            String insertQuery = "INSERT INTO provision (discovary_id, ip_address, credential_id, metrics) " +
+                            var insertQuery = "INSERT INTO provision (discovary_id, ip_address, credential_id, metrics) " +
                                     "VALUES ($1, $2, $3, $4::jsonb) RETURNING provision_id";
 
                             DatabaseClient.
@@ -112,7 +115,7 @@ public class ProvisioningHandler
                                         {
                                             long provisionId = insertRes.result().iterator().next().getLong("provision_id");
 
-                                            JsonObject response = new JsonObject()
+                                            var response = new JsonObject()
                                                     .put("provisioned", true)
                                                     .put("provision_id", provisionId)
                                                     .put("discovary_id", discovaryId)
@@ -138,12 +141,13 @@ public class ProvisioningHandler
                                 .end(new JsonObject().put("error", "Database error").encode());
                     }
                 });
-
             }
             else
             {
-                context.response().setStatusCode(500)
-                        .end(new JsonObject().put("error", "Database error").encode());
+                context.
+                        response().
+                        setStatusCode(500).
+                        end(new JsonObject().put("error", "Database error").encode());
             }
         });
     }
@@ -151,22 +155,24 @@ public class ProvisioningHandler
 
     public void handleUpdateProvision(RoutingContext context)
     {
-        JsonObject body = context.body().asJsonObject();
+        var body = context.body().asJsonObject();
         if (!body.containsKey("provision_id") || !body.containsKey("credential_id") || !body.containsKey("metrics")) {
             context.response().setStatusCode(400)
                     .end(new JsonObject().put("error", "Missing fields").encode());
             return;
         }
 
-        long provisionId = body.getLong("provision_id");
-        int credentialId = body.getInteger("credential_id");
-        JsonObject metrics = body.getJsonObject("metrics");
+        var provisionId = body.getLong("provision_id");
+        var credentialId = body.getInteger("credential_id");
+        var metrics = body.getJsonObject("metrics");
 
-        String query = "UPDATE provision SET credential_id = $1, metrics = $2::jsonb WHERE provision_id = $3";
+        var query = "UPDATE provision SET credential_id = $1, metrics = $2::jsonb WHERE provision_id = $3";
 
         DatabaseClient.getPool().preparedQuery(query)
-                .execute(Tuple.of(credentialId, metrics.encode(), provisionId), ar -> {
-                    if (ar.succeeded()) {
+                .execute(Tuple.of(credentialId, metrics.encode(), provisionId), ar -> 
+                {
+                    if (ar.succeeded())
+                    {
                         context.response()
                                 .putHeader("Content-Type", "application/json")
                                 .end(new JsonObject().put("message", "Provision updated").encode());
@@ -179,45 +185,92 @@ public class ProvisioningHandler
                 });
     }
 
-
     public void handleStartPolling(RoutingContext context)
     {
-        String provisionIdStr = context.pathParam("id");
+        var provisionIdStr = context.pathParam("id");
 
-        try
+        try 
         {
-            long provisionId = Long.parseLong(provisionIdStr);
+            var provisionId = Long.parseLong(provisionIdStr);
 
-            String query = "SELECT * FROM provision WHERE provision_id = $1";
+            var query = "SELECT * FROM provision WHERE provision_id = $1";
 
             DatabaseClient.getPool()
                     .preparedQuery(query)
-                    .execute(Tuple.of(provisionId), ar -> {
+                    .execute(Tuple.of(provisionId), ar -> 
+                    {
 
                         if (ar.succeeded() && ar.result().rowCount() > 0)
                         {
-                            Row row = ar.result().iterator().next();
-                            String ip = row.getString("ip_address");
-                            String metricsStr = row.getString("metrics");
-                            String credentialsId= row.getString("credential_id");
-                            String discoveryId= row.getString("discovary_id");
+                            var row = ar.result().iterator().next();
+                            var ip = row.getString("ip_address");
 
+                            // ✅ Fix here: handle metrics safely
+                            var metricsObj = row.getValue("metrics");
+                            var metricsStr = (metricsObj instanceof String) ? (String) metricsObj : metricsObj.toString();
 
+                            //  Fetch as Long (or Integer if your DB type is Integer)
+                            var credentialsId = row.getLong("credential_id");
+                            var discoveryId = row.getLong("discovary_id");
 
-                            if (metricsStr != null)
+                            //  Correctly fetch discovery and credential
+                            var discoveryFuture = fetchDiscoveryById(discoveryId);
+                            var credentialFuture = fetchCredentialById(credentialsId);
+
+                            // Combine both futures
+                            CompositeFuture.all(discoveryFuture, credentialFuture).onComplete(ar1 -> 
                             {
-//                                JsonObject provisionResponse()
-                                JsonObject metrics = new JsonObject(metricsStr);  // ✅ fixed: parse directly
-                                PollingEngine.startPolling(this.vertx , provisionId, ip, metrics);
-                                context.response().setStatusCode(200)
-                                        .end(new JsonObject().put("success", "Polling is started...").encode());
-                            }
-                            else
-                            {
-                                context.response().setStatusCode(400)
-                                        .end(new JsonObject().put("error", "Metrics JSON is null").encode());
-                            }
-                        }
+                                if (ar1.succeeded()) 
+                                {
+                                    var discovery = discoveryFuture.result();
+                                    var credential = credentialFuture.result();
+
+                                    // Merging discovery and credential
+                                    var combinedResult = new JsonObject();
+                                    var port = discovery.getLong("port");
+                                    var data = credential.getJsonObject("data");
+                                    var communityvar = data.getString("community");
+
+                                    // ✅ Create finalMetric only if metricsStr is not null
+                                    if (metricsStr != null)
+                                    {
+                                        var finalMetric = new JsonObject();
+                                        var metrics = new JsonObject(metricsStr);
+
+                                        for (var metric : metrics.fieldNames()) 
+                                        {
+                                            var value = metrics.getValue(metric);
+                                            var key = discoveryId + "," + ip + "," + port + "," + communityvar + "," + metric;
+                                            finalMetric.put(key, value);
+                                        }
+
+                                        // Add finalMetric to combinedResult and send the response
+                                        combinedResult.put("finalMetric", finalMetric);
+
+                                        PollingEngine.startPolling(provisionId, finalMetric);
+
+                                        // Send the response with both discovery, credential, and finalMetric
+                                        context.response()
+                                                .setStatusCode(200)
+                                                .putHeader("Content-Type", "application/json")
+                                                .end(combinedResult.encodePrettily());
+                                    } 
+                                    else 
+                                    {
+                                        context.response().setStatusCode(400)
+                                                .end(new JsonObject().put("error", "Metrics JSON is null").encode());
+                                    }
+                                }
+                                else
+                                {
+                                    context.response()
+                                            .setStatusCode(500)
+                                            .putHeader("Content-Type", "application/json")
+                                            .end(new JsonObject().put("error", "Failed to fetch data").encode());
+                                }
+                            });
+
+                        } 
                         else
                         {
                             context.response().setStatusCode(404)
@@ -225,35 +278,37 @@ public class ProvisioningHandler
                         }
                     });
 
-        }
-        catch (NumberFormatException e)
+        } 
+        catch (NumberFormatException e) 
         {
             context.response().setStatusCode(400).end("Invalid provision ID format");
         }
     }
 
+
     public void handleListAllProvisions(RoutingContext context)
     {
-        String query = "SELECT * FROM provision";
+        var query = "SELECT * FROM provision";
 
         DatabaseClient.
                 getPool().
                 query(query).
-                execute(ar -> {
+                execute(ar -> 
+                {
 
             if (ar.succeeded())
             {
-                JsonArray results = new JsonArray();
+                var results = new JsonArray();
 
                 for (Row row : ar.result())
                 {
-                    JsonObject obj = new JsonObject()
+                    var obj = new JsonObject()
                             .put("provision_id", row.getLong("provision_id"))
                             .put("discovary_id", row.getLong("discovary_id"))
                             .put("ip_address", row.getString("ip_address"))
                             .put("credential_id", row.getInteger("credential_id"));
 
-                    String metricsStr = row.getString("metrics");
+                    var metricsStr = row.getString("metrics");
 
                     if (metricsStr != null)
                     {
@@ -267,23 +322,29 @@ public class ProvisioningHandler
                     results.add(obj);
                 }
                 context.response().putHeader("Content-Type", "application/json").end(results.encode());
-            } else {
+            }
+            else
+            {
                 context.response().setStatusCode(500).end(new JsonObject().put("error", "Failed to fetch provisions").encode());
             }
         });
     }
 
-    public void handleGetProvisionById(RoutingContext context) {
-        String idStr = context.pathParam("id");
+    public void handleGetProvisionById(RoutingContext context)
+    {
+        var idStr = context.pathParam("id");
 
-        try {
-            long provisionId = Long.parseLong(idStr);
-            String query = "SELECT * FROM provision WHERE provision_id = $1";
+        try
+        {
+            var provisionId = Long.parseLong(idStr);
+            var query = "SELECT * FROM provision WHERE provision_id = $1";
 
-            DatabaseClient.getPool().preparedQuery(query).execute(Tuple.of(provisionId), ar -> {
-                if (ar.succeeded() && ar.result().rowCount() > 0) {
-                    Row row = ar.result().iterator().next();
-                    JsonObject obj = new JsonObject()
+            DatabaseClient.getPool().preparedQuery(query).execute(Tuple.of(provisionId), ar ->
+            {
+                if (ar.succeeded() && ar.result().rowCount() > 0)
+                {
+                    var row = ar.result().iterator().next();
+                    var obj = new JsonObject()
                             .put("provision_id", row.getLong("provision_id"))
                             .put("discovary_id", row.getLong("discovary_id"))
                             .put("ip_address", row.getString("ip_address"))
@@ -291,11 +352,15 @@ public class ProvisioningHandler
                             .put("metrics", new JsonObject(row.getString("metrics")));
 
                     context.response().putHeader("Content-Type", "application/json").end(obj.encode());
-                } else {
+                }
+                else
+                {
                     context.response().setStatusCode(404).end(new JsonObject().put("error", "Provision not found").encode());
                 }
             });
-        } catch (NumberFormatException e) {
+        }
+        catch (NumberFormatException exception)
+        {
             context.response().setStatusCode(400).end(new JsonObject().put("error", "Invalid ID format").encode());
         }
     }
@@ -304,11 +369,11 @@ public class ProvisioningHandler
 
     public void handleGetProvisionStatus(RoutingContext context)
     {
-        String deviceId = context.pathParam("deviceId");
+        var deviceId = context.pathParam("deviceId");
 
         // TODO: Query provisioning status from DB
 
-        JsonObject response = new JsonObject()
+        var response = new JsonObject()
                 .put("deviceId", deviceId)
                 .put("status", "Provisioned"); // Replace with actual status
 
@@ -316,4 +381,61 @@ public class ProvisioningHandler
                 .putHeader("Content-Type", "application/json")
                 .end(response.encode());
     }
+
+    public Future<JsonObject> fetchDiscoveryById(long discoveryId)
+    {
+        var promise = Promise.<JsonObject>promise();
+        var query = DBQueries.getDiscoveryById;
+
+        DatabaseClient.getPool()
+                .preparedQuery(query)
+                .execute(Tuple.of(discoveryId), ar ->
+                {
+                    if (ar.succeeded() && ar.result().size() > 0)
+                    {
+                        var row = ar.result().iterator().next();
+                        var discovery = new JsonObject()
+                                .put("id", row.getLong("id"))
+                                .put("discovery_name", row.getString("discovery_name"))
+                                .put("ip_address", row.getString("ip_address"))
+                                .put("port", row.getInteger("port"))
+                                .put("created_at", row.getLocalDateTime("created_at").toString());
+                        promise.complete(discovery);
+                    }
+                    else
+                    {
+                        promise.fail("Discovery not found");
+                    }
+                });
+
+        return promise.future();
+    }
+
+    public Future<JsonObject> fetchCredentialById(long credentialId)
+    {
+        var promise = Promise.<JsonObject>promise();
+        var query = DBQueries.selectCredentialById;
+
+        DatabaseClient.getPool()
+                .preparedQuery(query)
+                .execute(Tuple.of(credentialId), ar ->
+                {
+                    if (ar.succeeded() && ar.result().size() > 0)
+                    {
+                        Row row = ar.result().iterator().next();
+                        var credential = new JsonObject()
+                                .put("id", row.getLong("id"))
+                                .put("system_type", row.getString("systemtype"))
+                                .put("data", new JsonObject( row.getString("data")));
+                        promise.complete(credential);
+                    }
+                    else
+                    {
+                        promise.fail("Credential not found");
+                    }
+                });
+
+        return promise.future();
+    }
+
 }

@@ -8,19 +8,19 @@ public class IpUtils
 {
     public static List<String> extractIpList(String input)
     {
-        List<String> ips = new ArrayList<>();
+        var ips = new ArrayList<String>();
 
         // Range format: A.B.C.start-end
-        Pattern rangePattern = Pattern.compile("^(\\d+\\.\\d+\\.\\d+)\\.(\\d+)-(\\d+)$");
-        Matcher matcher = rangePattern.matcher(input);
+        var rangePattern = Pattern.compile("^(\\d+\\.\\d+\\.\\d+)\\.(\\d+)-(\\d+)$");
+        var matcher = rangePattern.matcher(input);
 
         if (matcher.matches())
         {
-            String base = matcher.group(1);
-            int start = Integer.parseInt(matcher.group(2));
-            int end = Integer.parseInt(matcher.group(3));
+            var base = matcher.group(1);
+            var start = Integer.parseInt(matcher.group(2));
+            var end = Integer.parseInt(matcher.group(3));
 
-            for (int i = start; i <= end; i++)
+            for (var i = start; i <= end; i++)
             {
                 ips.add(base + "." + i);
             }
@@ -42,25 +42,25 @@ public class IpUtils
     // Basic CIDR to IP expansion (IPv4 only)
     private static List<String> expandCidr(String cidr)
     {
-        List<String> result = new ArrayList<>();
+        var result = new ArrayList<String>();
         try
         {
-            String[] parts = cidr.split("/");
-            int prefix = Integer.parseInt(parts[1]);
-            int mask = 0xffffffff << (32 - prefix);
+            var parts = cidr.split("/");
+            var prefix = Integer.parseInt(parts[1]);
+            var mask = 0xffffffff << (32 - prefix);
 
-            InetAddress baseAddress = InetAddress.getByName(parts[0]);
-            byte[] bytes = baseAddress.getAddress();
-            int baseIp = ((bytes[0] & 0xFF) << 24) |
+            var baseAddress = InetAddress.getByName(parts[0]);
+            var bytes = baseAddress.getAddress();
+            var baseIp = ((bytes[0] & 0xFF) << 24) |
                     ((bytes[1] & 0xFF) << 16) |
                     ((bytes[2] & 0xFF) << 8) |
                     (bytes[3] & 0xFF);
 
-            int numberOfIps = 1 << (32 - prefix);
+            var numberOfIps = 1 << (32 - prefix);
 
-            for (int i = 0; i < numberOfIps; i++)
+            for (var i = 0; i < numberOfIps; i++)
             {
-                int currentIp = (baseIp & mask) + i;
+                var currentIp = (baseIp & mask) + i;
                 result.add(String.format("%d.%d.%d.%d",
                         (currentIp >> 24) & 0xFF,
                         (currentIp >> 16) & 0xFF,

@@ -23,7 +23,7 @@ public class AuthHandler
     // Handle user login
     public void handleLogin(RoutingContext context)
     {
-        JsonObject body = context.body().asJsonObject();
+        var body = context.body().asJsonObject();
         if (body == null || !body.containsKey("email") || !body.containsKey("password"))
         {
             context.response()
@@ -32,18 +32,19 @@ public class AuthHandler
             return;
         }
 
-        String email = body.getString("email");
-        String password = body.getString("password");
+        var email = body.getString("email");
+        var password = body.getString("password");
 
-        String selectQuery = DBQueries.login;
+        var selectQuery = DBQueries.login;
         DatabaseClient.getPool()
                 .preparedQuery(selectQuery)
-                .execute(Tuple.of(email, password), ar -> {
+                .execute(Tuple.of(email, password), ar ->
+                {
 
                     if (ar.succeeded() && ar.result().rowCount() > 0)
                     {
-                        JsonObject claims = new JsonObject().put("email", email);
-                        String token = jwtAuth.generateToken(
+                        var claims = new JsonObject().put("email", email);
+                        var token = jwtAuth.generateToken(
 
                                 claims,
                                 new JWTOptions().setExpiresInMinutes(60)
@@ -69,7 +70,7 @@ public class AuthHandler
     // Handle user registration
     public void handleRegister(RoutingContext context)
     {
-        JsonObject body = context.body().asJsonObject();
+        var body = context.body().asJsonObject();
 
         if (body == null)
         {
@@ -79,9 +80,9 @@ public class AuthHandler
             return;
         }
 
-        String email = body.getString("email");
-        String password = body.getString("password");
-        String username = body.getString("username");
+        var email = body.getString("email");
+        var password = body.getString("password");
+        var username = body.getString("username");
 
         if (email == null || password == null || username == null)
         {
@@ -91,16 +92,16 @@ public class AuthHandler
             return;
         }
 
-        String insertQuery = DBQueries.registration;
+        var insertQuery = DBQueries.registration;
 
         DatabaseClient.getPool()
                 .preparedQuery(insertQuery)
-                .execute(Tuple.of(email, password, username), ar -> {
-
+                .execute(Tuple.of(email, password, username), ar -> 
+                {
                     if (ar.succeeded())
                     {
-                        JsonObject claims = new JsonObject().put("email", email);
-                        String token = jwtAuth.generateToken(
+                        var claims = new JsonObject().put("email", email);
+                        var token = jwtAuth.generateToken(
                                 claims,
                                 new JWTOptions().setExpiresInMinutes(60)
                         );

@@ -1,5 +1,4 @@
 package org.example.vertxDemo.Database;
-
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -20,9 +19,10 @@ public class DatabaseClient {
     private static boolean initialized = false;
 
     public static Future<Void> initialize(Vertx vertx) {
-        Promise<Void> promise = Promise.promise();
+        var promise = Promise.<Void>promise();
 
-        if (initialized) {
+        if (initialized)
+        {
             logger.warn("Database pool already initialized.");
             promise.complete();
             return promise.future();
@@ -35,25 +35,33 @@ public class DatabaseClient {
                 .setUser(Constants.DB_USERNAME)
                 .setPassword(Constants.DB_PASSWORD);
 
-        PoolOptions poolOptions = new PoolOptions().setMaxSize(5);
+        var poolOptions = new PoolOptions().setMaxSize(5);
         pool = Pool.pool(vertx, connectOptions, poolOptions);
         logger.info("Database connection pool initialized.");
 
-        pool.getConnection(res -> {
-            if (res.succeeded()) {
+        pool.getConnection(res ->
+        {
+            if (res.succeeded())
+            {
                 SqlConnection connection = res.result();
-                connection.query("SELECT 1").execute(queryRes -> {
-                    if (queryRes.succeeded()) {
+                connection.query("SELECT 1").execute(queryRes ->
+                {
+                    if (queryRes.succeeded())
+                    {
                         logger.info("Successfully connected to PostgreSQL!");
                         initialized = true;
                         promise.complete();
-                    } else {
+                    }
+                    else
+                    {
                         logger.error("Database query failed: {}", queryRes.cause().getMessage());
                         promise.fail(queryRes.cause());
                     }
                     connection.close();
                 });
-            } else {
+            }
+            else
+            {
                 logger.error("Failed to connect to PostgreSQL: {}", res.cause().getMessage());
                 promise.fail(res.cause());
             }
@@ -62,8 +70,10 @@ public class DatabaseClient {
         return promise.future();
     }
 
-    public static synchronized Pool getPool() {
-        if (!initialized) {
+    public static synchronized Pool getPool()
+    {
+        if (!initialized)
+        {
             logger.error("Database client is not initialized or pool is closed.");
             throw new IllegalStateException("DatabaseClient not initialized! Call initialize() first.");
         }
